@@ -55,71 +55,7 @@ jobs:
           python -m pytest
 
       # -----------------------------------------------------------------------
-      # 5. GitHub OIDC 토큰 claim 확인
-      #
-      # OIDC 인증 오류를 진단하기 위한 임시 단계입니다.
-      # 인증 문제가 해결된 뒤에는 이 단계를 삭제해도 됩니다.
-      #
-      # 실제 JWT 토큰 전체는 출력하지 않고,
-      # AWS IAM 신뢰 정책과 비교할 claim만 출력합니다.
-      # -----------------------------------------------------------------------
-      - name: Inspect GitHub OIDC claims
-        shell: bash
-        run: |
-          RESPONSE="$(
-            curl \
-              --silent \
-              --show-error \
-              --fail \
-              -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
-              "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com"
-          )"
-
-          TOKEN="$(
-            python -c \
-              "import json, sys; print(json.load(sys.stdin)['value'])" \
-              <<< "${RESPONSE}"
-          )"
-
-          export TOKEN
-
-          python - <<'PY'
-          import base64
-          import json
-          import os
-
-          token = os.environ["TOKEN"]
-
-          payload = token.split(".")[1]
-          payload += "=" * (-len(payload) % 4)
-
-          claims = json.loads(
-              base64.urlsafe_b64decode(payload).decode("utf-8")
-          )
-
-          visible_claims = [
-              "iss",
-              "aud",
-              "sub",
-              "repository",
-              "repository_owner",
-              "repository_visibility",
-              "ref",
-              "ref_type",
-              "environment",
-              "event_name",
-              "workflow",
-              "job_workflow_ref",
-          ]
-
-          print("===== GitHub OIDC claims =====")
-
-          for name in visible_claims:
-              print(f"{name}: {claims.get(name)}")
-          PY
-
-      # -----------------------------------------------------------------------
-      # 6. GitHub OIDC를 이용한 임시 AWS 자격 증명 발급
+      # 5. GitHub OIDC를 이용한 임시 AWS 자격 증명 발급
       # -----------------------------------------------------------------------
       - name: Configure temporary AWS credentials with OIDC
         uses: aws-actions/configure-aws-credentials@v5
@@ -130,7 +66,7 @@ jobs:
           role-session-name: GitHubActions-ECS-Deploy
 
       # -----------------------------------------------------------------------
-      # 7. AWS 호출 정보 확인
+      # 6. AWS 호출 정보 확인
       #
       # Access Key나 Secret Key를 출력하지 않고,
       # 현재 맡은 IAM 역할과 AWS 계정만 확인합니다.
@@ -140,14 +76,14 @@ jobs:
           aws sts get-caller-identity
 
       # -----------------------------------------------------------------------
-      # 8. Amazon ECR 로그인
+      # 7. Amazon ECR 로그인
       # -----------------------------------------------------------------------
       - name: Sign in to Amazon ECR
         id: ecr-login
         uses: aws-actions/amazon-ecr-login@v2
 
       # -----------------------------------------------------------------------
-      # 9. Docker 이미지 빌드 및 ECR Push
+      # 8. Docker 이미지 빌드 및 ECR Push
       #
       # Git commit SHA를 이미지 태그로 사용합니다.
       # 동일한 commit의 이미지가 이미 존재하면 다시 만들지 않고 재사용합니다.
@@ -188,7 +124,7 @@ jobs:
           echo "uri=${image_uri}" >> "${GITHUB_OUTPUT}"
 
       # -----------------------------------------------------------------------
-      # 10. 현재 ECS Task Definition 다운로드
+      # 9. 현재 ECS Task Definition 다운로드
       # -----------------------------------------------------------------------
       - name: Download current task definition
         run: |
@@ -198,7 +134,7 @@ jobs:
             > task-definition.json
 
       # -----------------------------------------------------------------------
-      # 11. Task Definition의 컨테이너 이미지 교체
+      # 10. Task Definition의 컨테이너 이미지 교체
       # -----------------------------------------------------------------------
       - name: Insert the new image into the task definition
         id: task-definition
@@ -209,7 +145,7 @@ jobs:
           image: ${{ steps.image.outputs.uri }}
 
       # -----------------------------------------------------------------------
-      # 12. ECS 서비스에 새로운 Task Definition 배포
+      # 11. ECS 서비스에 새로운 Task Definition 배포
       # -----------------------------------------------------------------------
       - name: Deploy the new task definition
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
@@ -220,7 +156,7 @@ jobs:
           wait-for-service-stability: true
 
       # -----------------------------------------------------------------------
-      # 13. 애플리케이션 상태 확인
+      # 12. 애플리케이션 상태 확인
       #
       # /healthz
       #   - FastAPI 애플리케이션이 정상 실행 중이면 200
@@ -291,7 +227,7 @@ jobs:
           fi
 
       # -----------------------------------------------------------------------
-      # 14. 배포 결과 요약
+      # 13. 배포 결과 요약
       # -----------------------------------------------------------------------
       - name: Write deployment summary
         if: success()
