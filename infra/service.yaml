@@ -69,8 +69,8 @@ Resources:
             Statement:
               - Effect: Allow
                 Action: s3:GetObject
-                Resource: !Sub "arn:${AWS::Partition}:s3:::${ModelArtifactBucketName}/models/approved/*"
-
+                # Resource: !Sub "arn:${AWS::Partition}:s3:::${ModelArtifactBucketName}/models/approved/*"
+                Resource: !Sub "arn:${AWS::Partition}:s3:::${ModelArtifactBucketName}/models/demo-ng/*"
   AlbSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -133,7 +133,6 @@ Resources:
     Type: AWS::ECS::TaskDefinition
     Properties:
       Family: !Sub "${ProjectName}-api"
-      ## TensorFlow CPU 추론에 사용할 Fargate 1 vCPU·2 GiB 조합
       Cpu: "1024"
       Memory: "2048"
       NetworkMode: awsvpc
@@ -156,10 +155,14 @@ Resources:
               Value: /app/artifacts
             - Name: DATABASE_PATH
               Value: /app/runtime-data/predictions.db
+            # - Name: MODEL_ARTIFACT_S3_URI
+            #   Value: !Sub "s3://${ModelArtifactBucketName}/models/approved"
+            # - Name: ALLOW_UNAPPROVED_MODEL
+            #   Value: "false"
             - Name: MODEL_ARTIFACT_S3_URI
-              Value: !Sub "s3://${ModelArtifactBucketName}/models/approved"
+              Value: !Sub "s3://${ModelArtifactBucketName}/models/demo-ng"
             - Name: ALLOW_UNAPPROVED_MODEL
-              Value: "false"
+              Value: "true"
           LogConfiguration:
             LogDriver: awslogs
             Options:
